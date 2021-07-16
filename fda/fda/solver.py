@@ -1,17 +1,15 @@
 import numpy as np
 from numpy.linalg import norm
 from scipy.fft import dctn, idctn, fftn, ifftn
-from scipy import interpolate
+from scipy.sparse.linalg import LinearOperator
 
-if __package__ == "":
-    from lux.game_constants import GAME_CONSTANTS
-else:
-    from lux.game_constants import GAME_CONSTANTS
+""" solve_poisson(f)
 
-""" get_potential(scores)
-Takes the energy values and returns how much potential each square has by solving
-the discrete poisson equation.
+Solves the Poisson equation
 
+    ∇²p = f
+
+using the finite difference method with Neumann boundary conditions.
 
 References: https://elonen.iki.fi/code/misc-notes/neumann-cosine/
             https://scicomp.stackexchange.com/questions/12913/poisson-equation-with-neumann-boundary-conditions
@@ -34,29 +32,49 @@ def solve_poisson(f):
 
     # Return to normal space
     potential = idctn(dct, type=1)
-    return -potential
+    return potential / 2
 
 
-def norm(m):
-    return np.linalg.norm(m, ord=np.inf)
+""" get_potential(f, r, tol=1e-2, max_iters=10)
+Uses the Woodbury matrix subtraction formula to solve the equation
+
+    (L - Iγ)p = f, where γ = 4-4r.
+
+The Woodbury equation gives us
+
+    (L - Iγ)⁻¹ = ∑ (L⁻¹γ)ⁿ L⁻¹u.
+
+As  L⁻¹u = solve_poisson(u), and (Iγ)u = γ⊙u, we can use the following iteration:
+
+    1. p = solve_poisson(f), k = p.copy()
+    2. k = solve_poisson(γk)
+    3. p += k
+    4. Repeat steps (2) and (3) until convergence.
 
 
-def get_potential(scores, resistances, tol=1e-3, max_iters=20):
-    scores /= norm(scores)**0.5
-    errors = []
-    potential = solve_poisson(scores)
-    potential /= norm(potential)
-    for i in range(max_iters - 1):
-        p = solve_poisson((scores + 4 * (1 - resistances) * potential))
-        p /= norm(p)
-        error = norm(p - potential)
-        if error < tol:
-            return p, error
+References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_sum
+            https://hal.archives-ouvertes.fr/hal-02010640/document
+"""
 
-        if i >= 2:
-            errors = errors[1:] + [error]
-        else:
-            errors.append(error)
-        potential = p
 
-    return p, error
+def get_potential(f, r, tol=1e-2, max_iters=10):
+    gamma = 4 * (1 - r)
+    p = solve_poisson(f)
+    p -= np.amax(p)  # Must be all negative or k might become positive
+    k = np.copy(p)
+    prev_k = k
+    rs = []
+    for i in range(max_iters):
+        k = solve_poisson(k * gamma)
+        p += k
+
+        m = np.mean(abs(p))
+        p /= m
+        k /= m
+
+        if np.amax(abs(k - prev_k)):
+            break
+
+        prev_k = k
+
+    return p

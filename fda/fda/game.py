@@ -1,3 +1,6 @@
+from lux.game_constants import GAME_CONSTANTS
+
+
 def prepare_scores(game_map, resource_type=None):
     rate = GAME_CONSTANTS["RESOURCE_TO_FUEL_RATE"][resource_type]
     nx, ny = game_map.width, game_map.height
