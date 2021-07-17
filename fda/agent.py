@@ -1,5 +1,7 @@
-import math, sys
+import math
+import sys
 import numpy as np
+import pathing
 
 if __package__ == "":
     # not sure how to fix this atm
@@ -16,6 +18,8 @@ else:
     from .lux import annotate
 
 DIRECTIONS = Constants.DIRECTIONS
+neighbors = [DIRECTIONS.NORTH, DIRECTIONS.EAST,
+             DIRECTIONS.SOUTH, DIRECTIONS.WEST]
 game_state = None
 
 
@@ -29,49 +33,41 @@ def agent(observation, configuration):
         game_state._update(observation["updates"][2:])
     else:
         game_state._update(observation["updates"])
-    
+
     actions = []
 
-    ### AI Code goes down here! ### 
+    ### AI Code goes down here! ###
     player = game_state.players[observation.player]
     opponent = game_state.players[(observation.player + 1) % 2]
     width, height = game_state.map.width, game_state.map.height
 
-    resource_tiles: list[Cell] = []
-    for y in range(height):
-        for x in range(width):
-            cell = game_state.map.get_cell(x, y)
-            if cell.has_resource():
-                resource_tiles.append(cell)
+    pather = pathing.Pather(game_state, player)
+
+    num_units = len(player.units)
+    num_citytiles = sum(len(city.citytiles) for city in player.cities.values())
 
     cities_to_build = 0
     for k, city in player.cities.items():
-        if (city.fuel > city.get_light_upkeep() * GAME_CONSTANTS["PARAMETERS"]["NIGHT_LENGTH"] + 1000):
+        city.cities_to_build = 0
+        if (city.fuel > city.get_light_upkeep() * GAME_CONSTANTS["PARAMETERS"]["NIGHT_LENGTH"] * 2):
             # if our city has enough fuel to survive the whole night and 1000 extra fuel, lets increment citiesToBuild and let our workers know we have room for more city tiles
-            cities_to_build += 1
+            city.cities_to_build += 1
         for citytile in city.citytiles:
             if citytile.can_act():
-                # you can use the following to get the citytile to research or build a worker
-                # commands.push(citytile.research());
-                # commands.push(citytile.buildWorker());
-                pass
+                if num_units < num_citytiles:
+                    actions.append(citytile.build_worker())
+                else:
+                    actions.append(citytile.research())
 
     # we iterate over all our units and do something with them
     for unit in player.units:
         if unit.is_worker() and unit.can_act():
-            closest_dist = math.inf
-            closest_resource_tile = None
             if unit.get_cargo_space_left() > 0:
                 # if the unit is a worker and we have space in cargo, lets find the nearest resource tile and try to mine it
-                for resource_tile in resource_tiles:
-                    if resource_tile.resource.type == Constants.RESOURCE_TYPES.COAL and not player.researched_coal(): continue
-                    if resource_tile.resource.type == Constants.RESOURCE_TYPES.URANIUM and not player.researched_uranium(): continue
-                    dist = resource_tile.pos.distance_to(unit.pos)
-                    if dist < closest_dist:
-                        closest_dist = dist
-                        closest_resource_tile = resource_tile
-                if closest_resource_tile is not None:
-                    actions.append(unit.move(unit.pos.direction_to(closest_resource_tile.pos)))
+                best_move = pather.best_move(unit)
+                pather.update_board(unit, best_move)
+                if best_move != DIRECTIONS.CENTER:
+                    actions.append(unit.move(best_move))
             else:
                 # if unit is a worker and there is no cargo space left, and we have cities, lets return to them
                 if len(player.cities) > 0:
@@ -83,15 +79,24 @@ def agent(observation, configuration):
                             if dist < closest_dist:
                                 closest_dist = dist
                                 closest_city_tile = city_tile
-                    if closest_city_tile is not None:
-                        move_dir = unit.pos.direction_to(closest_city_tile.pos)
-                        if cities_to_build > 0 and unit.pos.is_adjacent(closest_city_tile.pos) and unit.can_build(game_state.map):
-                            # here we consider building city tiles provided we are adjacent to a city tile and we can build
-                            actions.append(unit.build_city())        
+                    move_dir = unit.pos.direction_to(closest_city_tile.pos)
+                    if unit.cargo.wood == GAME_CONSTANTS["PARAMETERS"]["CITY_WOOD_COST"]:
+                        if unit.can_build(game_state.map) and (closest_city_tile.city.cities_to_build > 0 or not unit.pos.is_adjacent(closest_city_tile.pos)):
+                            actions.append(unit.build_city())
                         else:
-                            actions.append(unit.move(move_dir))
+                            moves = pather.sorted_moves(unit)
+                            if moves[0] == DIRECTIONS.CENTER:
+                                best_move = moves[1]
+                            else:
+                                best_move = moves[0]
+                            pather.update_board(unit, best_move)
+                            actions.append(unit.move(best_move))
+
+                    else:
+                        pather.update_board(unit, move_dir)
+                        actions.append(unit.move(move_dir))
 
     # you can add debug annotations using the functions in the annotate object
     # actions.append(annotate.circle(0, 0))
-    
+
     return actions

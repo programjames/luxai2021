@@ -63,9 +63,12 @@ def get_potential(f, r, tol=1e-2, max_iters=10):
     prev_k = k
     rs = []
     for i in range(max_iters):
-        k = solve_poisson(k * gamma) / len(f)
-        p -= k
+        k = solve_poisson(k * gamma)
+        k /= np.prod(f.shape)  # np.amax(abs(k))
+        p += k
         m = np.amax(abs(p))
+        if m == 0:
+            break
         p /= m
         k /= m
         if np.amax(abs(k - prev_k)) < tol:
