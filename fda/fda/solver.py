@@ -1,7 +1,5 @@
 import numpy as np
-from numpy.linalg import norm
-from scipy.fft import dctn, idctn, fftn, ifftn
-from scipy.sparse.linalg import LinearOperator
+from scipy.fft import dctn, idctn
 
 """ solve_poisson(f)
 
@@ -47,7 +45,7 @@ The Woodbury equation gives us
 As  L⁻¹u = solve_poisson(u), and (Iγ)u = γ⊙u, we can use the following iteration:
 
     1. p = solve_poisson(f), k = p.copy()
-    2. k = solve_poisson(γk)
+    2. k = solve_poisson(γ*k)
     3. p += k
     4. Repeat steps (2) and (3) until convergence.
 
@@ -58,23 +56,19 @@ References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_
 
 
 def get_potential(f, r, tol=1e-2, max_iters=10):
-    gamma = 4 * (1 - r)
+    gamma = 4 - 4 * r
     p = solve_poisson(f)
-    p -= np.amax(p)  # Must be all negative or k might become positive
+    p -= np.mean(p)
     k = np.copy(p)
     prev_k = k
     rs = []
     for i in range(max_iters):
-        k = solve_poisson(k * gamma)
-        p += k
-
-        m = np.mean(abs(p))
+        k = solve_poisson(k * gamma) / len(f)
+        p -= k
+        m = np.amax(abs(p))
         p /= m
         k /= m
-
-        if np.amax(abs(k - prev_k)):
+        if np.amax(abs(k - prev_k)) < tol:
             break
-
         prev_k = k
-
     return p
