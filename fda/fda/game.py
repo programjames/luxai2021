@@ -3,7 +3,7 @@ from lux.game_constants import GAME_CONSTANTS as gc
 import sys
 
 
-def prepare_scores(game_map, resource_types=None):
+def prepare_scores(game_map, player, resource_types=None):
     nx, ny = game_map.width, game_map.height
     scores = np.zeros((ny, nx))
     if resource_types is None:
@@ -14,10 +14,8 @@ def prepare_scores(game_map, resource_types=None):
         for x in range(nx):
             for y in range(ny):
                 c = game_map.get_cell(x, y)
-                if c.has_resource():
-                    if c.resource.type.upper() != resource_type:
-                        continue
-                    scores[y][x] += rate  # * c.resource.amount
+                if c.has_resource() and c.resource.type.upper() == resource_type:
+                    scores[y][x] += rate
     return scores
 
 

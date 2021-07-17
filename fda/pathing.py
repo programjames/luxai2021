@@ -27,7 +27,7 @@ class Pather(object):
             if player.research_points >= gc["PARAMETERS"]["RESEARCH_REQUIREMENTS"][t]:
                 resource_types.append(t)
         self.scores = fda.prepare_scores(
-            game.map, resource_types)
+            game.map, player, resource_types)
         self.rs = dict()
         for unit_type in ["WORKER", "CART"]:
             self.rs[U[unit_type]] = fda.prepare_resistances(

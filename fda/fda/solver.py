@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.fft import dctn, idctn
+import sys
 
 """ solve_poisson(f)
 
@@ -56,22 +57,20 @@ References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_
 
 
 def get_potential(f, r, tol=1e-2, max_iters=10):
-    gamma = 4 - 4 * r
-    p = solve_poisson(f)
-    p -= np.mean(p)
-    k = np.copy(p)
+    r = 2 * r / np.amax(r)  # makes it more stable
+    gamma = 4 * (1 - r)
+    q = solve_poisson(f)
+    q -= np.amax(q)  # Must be all negative or k might become positive
+    k = np.copy(q)
     prev_k = k
     rs = []
     for i in range(max_iters):
-        k = solve_poisson(k * gamma)
-        k /= np.prod(f.shape)  # np.amax(abs(k))
-        p += k
-        m = np.amax(abs(p))
-        if m == 0:
-            break
-        p /= m
+        k = solve_poisson(k * gamma) / np.prod(f.shape)
+        q += k
+        m = np.amax(abs(k))
+        q /= m
         k /= m
         if np.amax(abs(k - prev_k)) < tol:
             break
         prev_k = k
-    return p
+    return q
