@@ -36,20 +36,20 @@ def solve_poisson(f):
 
 
 """ get_potential(f, r, tol=1e-2, max_iters=10)
-Uses the Woodbury matrix subtraction formula to solve the equation
+Uses the Woodbury matrix addition formula to solve the equation
 
-    (L - Iγ)p = f, where γ = 4-4r.
+    (L + Iγ)p = f, where γ = 4-4r.
 
 The Woodbury equation gives us
 
-    (L + Iγ)⁻¹ = L⁻¹ - L⁻¹(L⁻¹ + Iγ⁻¹)L⁻¹
+    (L + Iγ)⁻¹ = L⁻¹ - L⁻¹(L⁻¹ + Iγ⁻¹)⁻¹L⁻¹
 
-As  L⁻¹u = solve_poisson(u), and (Iγ⁻¹)u = u/γ, we can use GMRES
+As  L⁻¹x = solve_poisson(x), and (Iγ⁻¹)x = x/γ, we can use GMRES to quickly
+solve
 
-    1. p = solve_poisson(f), k = p.copy()
-    2. k = solve_poisson(γ*k)
-    3. p += k
-    4. Repeat steps (2) and (3) until convergence.
+    (L⁻¹ + Iγ⁻¹)z = L⁻¹f
+
+Our answer is then just L⁻¹f - L⁻¹z.
 
 
 References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_sum
