@@ -10,9 +10,9 @@ if __name__ == "__main__":
         nx = i
         ny = i
         scores = np.zeros((nx, ny))
-        scores[0, :] = 1
+        scores[nx // 2, ny // 2] = 10
         resistances = np.ones(scores.shape)
-        resistances[nx // 5, ny // 3:ny - 1 - ny // 3] = 2
+        resistances[nx // 2 + 1, ny // 3:ny - 1 - ny // 3] = 2
         return -scores.T, resistances.T
 
     def prepare_random(i):

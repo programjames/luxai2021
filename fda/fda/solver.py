@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.fft import dctn, idctn
+from scipy.sparse.linalg import LinearOperator, gmres
 import sys
 
 """ solve_poisson(f)
@@ -41,9 +42,9 @@ Uses the Woodbury matrix subtraction formula to solve the equation
 
 The Woodbury equation gives us
 
-    (L - Iγ)⁻¹ = ∑ (L⁻¹γ)ⁿ L⁻¹u.
+    (L + Iγ)⁻¹ = L⁻¹ - L⁻¹(L⁻¹ + Iγ⁻¹)L⁻¹
 
-As  L⁻¹u = solve_poisson(u), and (Iγ)u = γ⊙u, we can use the following iteration:
+As  L⁻¹u = solve_poisson(u), and (Iγ⁻¹)u = u/γ, we can use GMRES
 
     1. p = solve_poisson(f), k = p.copy()
     2. k = solve_poisson(γ*k)
@@ -56,21 +57,17 @@ References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_
 """
 
 
-def get_potential(f, r, tol=1e-2, max_iters=10):
-    r = 2 * r / np.amax(r)  # makes it more stable
+def get_potential(f, r, tol=1e-3, max_iters=10):
+    f -= np.mean(f)
     gamma = 4 * (1 - r)
-    q = solve_poisson(f)
-    q -= np.amax(q)  # Must be all negative or k might become positive
-    k = np.copy(q)
-    prev_k = k
-    rs = []
-    for i in range(max_iters):
-        k = solve_poisson(k * gamma) / np.prod(f.shape)
-        q += k
-        m = np.amax(abs(k))
-        q /= m
-        k /= m
-        if np.amax(abs(k - prev_k)) < tol:
-            break
-        prev_k = k
-    return q
+    gamma[abs(gamma) < 1e-9] = 1e-9
+
+    def W(v):
+        v = v.reshape(f.shape)
+        return solve_poisson(v) + v / gamma
+    n2 = np.prod(f.shape)
+    L = LinearOperator(shape=(n2, n2), matvec=W)
+    u = solve_poisson(f)
+    z, _ = gmres(L, u.flatten(), tol=tol, maxiter=max_iters)
+    z = z.reshape(f.shape)
+    return u - solve_poisson(z)
