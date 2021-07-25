@@ -1,30 +1,35 @@
+
+import numpy as np
+
+
+def prepare_test(i):
+    nx = i
+    ny = i
+    scores = np.zeros((nx, ny))
+    scores[nx // 4, :] = 1
+    resistances = np.ones(scores.shape)
+    resistances[nx // 5, ny // 3:ny - 1 - ny // 3] = 2
+    return -scores.T, resistances.T
+
+
+def prepare_random(i):
+    nx = i
+    ny = i
+    scores = np.random.rand(nx, ny) + 1
+    resistances = np.random.rand(nx, ny) + 1
+    return -scores.T, resistances.T
+
+
 if __name__ == "__main__":
 
     import solver
-    import numpy as np
 
     import seaborn as sns
     import matplotlib.pyplot as plt
 
-    def prepare_test(i):
-        nx = i
-        ny = i
-        scores = np.zeros((nx, ny))
-        scores[nx // 2, ny // 2] = 10
-        resistances = np.ones(scores.shape)
-        resistances[nx // 2 + 1, ny // 3:ny - 1 - ny // 3] = 2
-        return -scores.T, resistances.T
-
-    def prepare_random(i):
-        nx = i
-        ny = i
-        scores = np.random.rand(nx, ny)
-        resistances = np.random.rand(nx, ny) * 5 + 1
-        return -scores.T, resistances.T
-
-    scores, resistances = prepare_test(50)
-    poisson = solver.solve_poisson(scores)
-    p = solver.get_potential(scores, resistances, tol=1e-10)
+    scores, resistances = prepare_test(500)
+    poisson = solver.get_potential_dirichlet(scores, resistances)
+    p = solver.get_potential(scores, resistances)
 
     nx, ny = scores.shape
     x, y = np.meshgrid(range(nx), range(ny))

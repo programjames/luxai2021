@@ -110,12 +110,26 @@ class Unit:
         else:
             return GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["CART"] - spaceused
 
+    def get_fuel(self):
+        return self.cargo.wood * \
+            GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"]["WOOD"] + \
+            self.cargo.coal * \
+            GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"]["COAL"] + \
+            self.cargo.uranium * \
+            GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"]["URANIUM"]
+
+    def get_light_upkeep(self):
+        if self.is_worker():
+            return GAME_CONSTANTS["PARAMETERS"]["LIGHT_UPKEEP"]["WORKER"]
+        else:
+            return GAME_CONSTANTS["PARAMETERS"]["LIGHT_UPKEEP"]["CART"]
+
     def can_build(self, game_map, pos=None) -> bool:
         if pos is None:
             cell = game_map.get_cell_by_pos(self.pos)
         else:
             cell = game_map.get_cell_by_pos(pos)
-        if not cell.has_resource() and self.can_act() and self.cargo.wood >= GAME_CONSTANTS["PARAMETERS"]["CITY_WOOD_COST"]:
+        if cell.is_empty() and self.can_act() and self.cargo.wood >= GAME_CONSTANTS["PARAMETERS"]["CITY_WOOD_COST"]:
             return True
         return False
 
