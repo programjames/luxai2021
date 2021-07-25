@@ -56,7 +56,7 @@ References: https://en.wikipedia.org/wiki/Woodbury_matrix_identity#Inverse_of_a_
 """
 
 
-def get_potential(f, r, tol=1e-3, max_iters=10, outer_v=None):
+def get_potential_neumann(f, r, tol=1e-3, max_iters=10, outer_v=None):
     gamma = 4 * (1 - r)
     gamma[abs(gamma) < 1e-10] = 1e-10
 

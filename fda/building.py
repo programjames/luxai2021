@@ -7,12 +7,13 @@ from lux.game_map import Position
 class Builder(object):
     MAX_BUILD_DISTANCE = 3
 
-    def __init__(self, game_map, cities, pather):
+    def __init__(self, cities, pather):
         self.pather = pather
-        self.empty = np.zeros((game_map.height, game_map.width), dtype="bool")
-        for x in range(game_map.width):
-            for y in range(game_map.height):
-                self.empty[y][x] = game_map.get_cell(x, y).is_empty()
+        self.empty = np.zeros(
+            (pather.map.height, pather.map.width), dtype="bool")
+        for x in range(pather.map.width):
+            for y in range(pather.map.height):
+                self.empty[y][x] = pather.map.get_cell(x, y).is_empty()
 
         # Find all locations bordering a city.
         self.build_locs = set()
@@ -29,10 +30,10 @@ class Builder(object):
                     continue
                 self.build_locs.add((new_x, new_y))
 
-        # Flood fill to make city_moves
+        # Flood fill to make build_moves
 
         self.build_moves = [
-            [0 for i in range(game.map.width)] for j in range(game.map.height)]
+            [0 for i in range(pather.map.width)] for j in range(pather.map.height)]
 
         open_set = self.build_locs
         closed_set = open_set.copy()
@@ -43,7 +44,7 @@ class Builder(object):
             for x, y in open_set:
                 for dx, dy in DELTA_NEIGHBORS:
                     new_x, new_y = x + dx, y + dy
-                    if not self.on_map(new_x, new_y) or (new_x, new_y) in closed_set():
+                    if not self.pather.on_map(new_x, new_y) or (new_x, new_y) in closed_set:
                         continue
                     new_open.add((new_x, new_y))
                     closed_set.add((new_x, new_y))
@@ -57,15 +58,15 @@ class Builder(object):
     def build_move(self, unit):
         x, y = unit.pos.x, unit.pos.y
         move_dir = Constants.DIRECTIONS.CENTER
-        d = self.city_moves[new_y][new_x]
-        if not can_move(x, y):
+        d = self.build_moves[y][x]
+        if not self.pather.can_move(x, y):
             d = np.inf
         for dx, dy in DELTA_NEIGHBORS:
             new_x, new_y = x + dx, y + dy
-            if self.can_move(new_x, new_y) and self.city_moves[new_y][new_x] < d:
-                d = self.city_moves[new_y][new_x]
-                dir = DIRECTION_FROM_DELTA[(dx, dy)]
-        return dir
+            if self.pather.can_move(new_x, new_y) and self.build_moves[new_y][new_x] < d:
+                d = self.build_moves[new_y][new_x]
+                move_dir = DIRECTION_FROM_DELTA[(dx, dy)]
+        return move_dir
 
     def move(self, unit):
         move_dir = self.build_move(unit)

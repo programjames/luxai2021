@@ -11,6 +11,7 @@ import sys
 
 class Pather(object):
     def __init__(self, game, player):
+        self.map = game.map
         day = is_day(game.turn)
         resource_types = ["WOOD"]
         for t in ["COAL", "URANIUM"]:
@@ -24,7 +25,7 @@ class Pather(object):
                 game.map, unit_type, day)
         self.ps = dict()
         for unit_type, r in self.rs.items():
-            self.ps[unit_type] = fda.get_potential(-self.scores, r)
+            self.ps[unit_type] = fda.get_potential_dirichlet(-self.scores, r)
 
         self.is_open = np.ones((game.map.height, game.map.width), dtype="bool")
 
@@ -46,7 +47,7 @@ class Pather(object):
             for x, y in open_set:
                 for dx, dy in DELTA_NEIGHBORS:
                     new_x, new_y = x + dx, y + dy
-                    if not self.on_map(new_x, new_y) or (new_x, new_y) in closed_set():
+                    if not self.on_map(new_x, new_y) or (new_x, new_y) in closed_set:
                         continue
                     new_open.add((new_x, new_y))
                     closed_set.add((new_x, new_y))
@@ -54,8 +55,6 @@ class Pather(object):
             open_set = new_open
 
         # print(*resource_types, file=sys.stderr)
-
-        self.map = game.map
 
     def on_map(self, x, y):
         return x >= 0 and y >= 0 and x < self.map.width and y < self.map.height
@@ -90,8 +89,8 @@ class Pather(object):
     def sorted_city_moves(self, unit):
         x, y = unit.pos.x, unit.pos.y
         dirs = [Constants.DIRECTIONS.CENTER]
-        ds = [self.city_moves[new_y][new_x]]
-        if not can_move(x, y):
+        ds = [self.city_moves[y][x]]
+        if not self.can_move(x, y):
             ds[0] = np.inf
         for dx, dy in DELTA_NEIGHBORS:
             new_x, new_y = x + dx, y + dy
@@ -101,7 +100,7 @@ class Pather(object):
         return [d for _, d in sorted(zip(ds, dirs))]
 
     def city_move(self, unit):
-        return sorted_city_moves[0]
+        return self.sorted_city_moves(unit)[0]
 
     def move(self, unit, how="mine"):
         if how == "mine":
@@ -114,4 +113,4 @@ class Pather(object):
     def update_board(self, unit, move):
         dx, dy = DELTA_FROM_DIRECTION[move]
         if not (unit.pos.x + dx, unit.pos.y + dy) in self.city_locs:
-            self.is_open[unit.type][unit.pos.y + dy][unit.pos.x + dx] = False
+            self.is_open[unit.pos.y + dy][unit.pos.x + dx] = False

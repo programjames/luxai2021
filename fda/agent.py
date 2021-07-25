@@ -34,7 +34,7 @@ def agent(observation, configuration):
     width, height = game_state.map.width, game_state.map.height
 
     pather = pathing.Pather(game_state, player)
-    builder = building.Builder(game_state.map, player.cities.values(), pather)
+    builder = building.Builder(player.cities.values(), pather)
 
     num_units = len(player.units)
     num_citytiles = sum(len(city.citytiles) for city in player.cities.values())
@@ -70,16 +70,20 @@ def agent(observation, configuration):
             return True
         return unit.get_cargo_space_left() < GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["WORKER"] * 0.1
 
+    remove_set = set()
     for unit in workers:
         if not in_danger(unit):
             continue
-        workers.remove(unit)
+        remove_set.add(unit)
         actions.append(pather.move(unit, "city"))
 
+    workers -= remove_set
+
+    remove_set = set()
     for unit in workers:
         if not moving_to_city(unit):
             continue
-        workers.remove(unit)
+        remove_set.add(unit)
         if cities_to_build > 0 and unit.cargo.wood >= GAME_CONSTANTS["PARAMETERS"]["CITY_WOOD_COST"]:
             # Build a city
             if builder.on_build_loc(unit):
@@ -89,9 +93,13 @@ def agent(observation, configuration):
         else:
             actions.append(pather.move(unit, "city"))
 
+    workers -= remove_set
+
+    remove_set = set()
     for unit in workers:
-        workers.remove(unit)
+        remove_set.add(unit)
         actions.append(pather.move(unit, "mine"))
+    workers -= remove_set
 
     # you can add debug annotations using the functions in the annotate object
     # actions.append(annotate.circle(0, 0))
