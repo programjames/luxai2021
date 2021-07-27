@@ -133,6 +133,9 @@ class Unit:
             return True
         return False
 
+    def has_build_wood(self):
+        return self.cargo.wood >= GAME_CONSTANTS["PARAMETERS"]["CITY_WOOD_COST"]
+
     def can_act(self) -> bool:
         """
         whether or not the unit can move or not. This does not check for potential collisions into other units or enemy cities

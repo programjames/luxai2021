@@ -1,1 +1,1 @@
-start cmd /k lux-ai-2021 fda/main.py fda/main.py --statefulReplay
+start cmd /k lux-ai-2021 expand/main.py expand/main.py --statefulReplay

@@ -3,6 +3,7 @@ from typing import List
 
 from .constants import Constants
 
+from lux.misc import NEIGHBORS
 DIRECTIONS = Constants.DIRECTIONS
 RESOURCE_TYPES = Constants.RESOURCE_TYPES
 
@@ -104,6 +105,27 @@ class Position:
                 return DIRECTIONS.SOUTH
             else:
                 return DIRECTIONS.NORTH
+
+    def directions_to(self, target_pos: 'Position'):
+        dx = target_pos.x - self.x
+        dy = target_pos.y - self.y
+        if dx == dy == 0:
+            return [DIRECTIONS.CENTER, *NEIGHBORS]
+
+        if dx > 0:
+            x_dirs = [DIRECTIONS.EAST, DIRECTIONS.WEST]
+        else:
+            x_dirs = [DIRECTIONS.WEST, DIRECTIONS.EAST]
+
+        if dy > 0:
+            y_dirs = [DIRECTIONS.SOUTH, DIRECTIONS.NORTH]
+        else:
+            y_dirs = [DIRECTIONS.NORTH, DIRECTIONS.SOUTH]
+
+        if abs(dx) > abs(dy):
+            return [x_dirs[0], y_dirs[0], y_dirs[1], x_dirs[1]]
+        else:
+            return [y_dirs[0], x_dirs[0], x_dirs[1], y_dirs[1]]
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
